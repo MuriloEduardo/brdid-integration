@@ -5,38 +5,16 @@ const brdidService = require('../services/brdid.service');
  */
 class LocalidadesController {
     /**
-     * Lista todas as localidades disponíveis
+     * Busca localidades com DIDS disponíveis
      */
-    async listarLocalidades(req, res) {
+    async buscarLocalidades(req, res) {
         try {
-            const result = await brdidService.getLocalidades();
-            res.json({
-                success: true,
-                data: result,
-            });
+            const result = await brdidService.buscarLocalidades();
+            res.json({ success: true, data: result });
         } catch (error) {
             res.status(error.statusCode || 500).json({
                 success: false,
-                error: error.error || 'Erro ao buscar localidades',
-            });
-        }
-    }
-
-    /**
-     * Busca informações de uma localidade específica
-     */
-    async buscarLocalidade(req, res) {
-        try {
-            const { areaLocal } = req.params;
-            const result = await brdidService.getLocalidade(areaLocal);
-            res.json({
-                success: true,
-                data: result,
-            });
-        } catch (error) {
-            res.status(error.statusCode || 500).json({
-                success: false,
-                error: error.error || 'Erro ao buscar localidade',
+                error: error.error || 'Erro ao buscar localidades'
             });
         }
     }

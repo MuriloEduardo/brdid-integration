@@ -5,74 +5,95 @@ const brdidService = require('../services/brdid.service');
  */
 class BillingController {
     /**
-     * Obtém saldo da conta
+     * Cria um novo plano
      */
-    async getSaldo(req, res) {
+    async criarPlano(req, res) {
         try {
-            const result = await brdidService.getSaldo();
-            res.json({
-                success: true,
+            const result = await brdidService.criarPlano(req.body);
+            res.status(201).json({ 
+                success: true, 
                 data: result,
+                message: 'Plano criado com sucesso'
             });
         } catch (error) {
             res.status(error.statusCode || 500).json({
                 success: false,
-                error: error.error || 'Erro ao buscar saldo',
+                error: error.error || 'Erro ao criar plano'
             });
         }
     }
 
     /**
-     * Lista transações/extrato
+     * Lista Planos Billing
      */
-    async getExtrato(req, res) {
+    async listarPlanos(req, res) {
         try {
-            const result = await brdidService.getExtrato(req.query);
-            res.json({
-                success: true,
-                data: result,
-            });
+            const result = await brdidService.listarPlanos();
+            res.json({ success: true, data: result });
         } catch (error) {
             res.status(error.statusCode || 500).json({
                 success: false,
-                error: error.error || 'Erro ao buscar extrato',
+                error: error.error || 'Erro ao listar planos'
             });
         }
     }
 
     /**
-     * Lista faturas
+     * Cria um novo cliente no grupo de Billing
      */
-    async getFaturas(req, res) {
+    async criarCliente(req, res) {
         try {
-            const result = await brdidService.getFaturas(req.query);
-            res.json({
-                success: true,
+            const result = await brdidService.criarCliente(req.body);
+            res.status(201).json({ 
+                success: true, 
                 data: result,
+                message: 'Cliente criado com sucesso'
             });
         } catch (error) {
             res.status(error.statusCode || 500).json({
                 success: false,
-                error: error.error || 'Erro ao buscar faturas',
+                error: error.error || 'Erro ao criar cliente'
             });
         }
     }
 
     /**
-     * Obtém detalhes de uma fatura específica
+     * Lista grupo de clientes
      */
-    async getFatura(req, res) {
+    async listarClientes(req, res) {
         try {
-            const { faturaId } = req.params;
-            const result = await brdidService.getFatura(faturaId);
-            res.json({
-                success: true,
+            const result = await brdidService.listarClientes();
+            res.json({ success: true, data: result });
+        } catch (error) {
+            res.status(error.statusCode || 500).json({
+                success: false,
+                error: error.error || 'Erro ao listar clientes'
+            });
+        }
+    }
+
+    /**
+     * Vincule DIDs e um plano a um cliente
+     */
+    async montarClientePlanoDIDs(req, res) {
+        try {
+            const { idPlano, idCliente, listaDids } = req.body;
+            if (!idPlano || !idCliente || !listaDids) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'ID_PLANO, ID_CLIENTE e LISTA_DE_DIDS são obrigatórios'
+                });
+            }
+            const result = await brdidService.montarClientePlanoDIDs(idPlano, idCliente, listaDids);
+            res.json({ 
+                success: true, 
                 data: result,
+                message: 'Cliente, plano e DIDs vinculados com sucesso'
             });
         } catch (error) {
             res.status(error.statusCode || 500).json({
                 success: false,
-                error: error.error || 'Erro ao buscar fatura',
+                error: error.error || 'Erro ao vincular cliente, plano e DIDs'
             });
         }
     }

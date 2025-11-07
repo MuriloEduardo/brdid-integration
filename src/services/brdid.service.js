@@ -35,7 +35,7 @@ class BRDIDService {
                 data,
                 params: {
                     ...params,
-                    TOKEN: this.token, // Garante que TOKEN está sempre presente
+                    TOKEN: this.token,
                 },
             });
             return response.data;
@@ -52,274 +52,198 @@ class BRDIDService {
     // ==================== LOCALIDADES ====================
 
     /**
-     * Lista todas as localidades/DDDs disponíveis
+     * Busca localidades com DIDS disponíveis
+     * @returns {Promise<Array>} Lista de localidades
      */
-    async getLocalidades() {
-        return this.request('GET', '/listar_areas_locais');
-    }
-
-    /**
-     * Busca informações de uma localidade específica por nome
-     */
-    async getLocalidade(areaLocal) {
-        return this.request('GET', '/buscar_numeros_by_area_local', null, {
-            AREA_LOCAL: areaLocal
-        });
+    async buscarLocalidades() {
+        return this.request('GET', '/buscar_localidades');
     }
 
     // ==================== DID (NÚMEROS) ====================
 
     /**
-     * Lista números DID disponíveis para compra por área local
+     * Busca DIDs a partir do código de área local. Limitado a 100 DIDs
+     * @param {string} areaLocal - Nome da área local (ex: "Porto Alegre")
+     * @returns {Promise<Array>} Lista de números disponíveis
      */
-    async getNumerosDisponiveis(areaLocal, quantity = 10) {
+    async buscarNumerosByAreaLocal(areaLocal) {
         return this.request('GET', '/buscar_numeros_by_area_local', null, {
-            AREA_LOCAL: areaLocal,
-            LIMIT: quantity
+            AREA_LOCAL: areaLocal
         });
     }
 
     /**
-     * Busca números disponíveis por DDD
+     * Busca dados do DID
+     * @param {string} numero - Número completo do DID
+     * @returns {Promise<Object>} Dados do DID
      */
-    async getNumerosByDDD(ddd, quantity = 10) {
-        return this.request('GET', '/buscar_numeros_by_ddd', null, {
-            DDD: ddd,
-            LIMIT: quantity
+    async consultarDID(numero) {
+        return this.request('GET', '/consultar_did', null, {
+            NUMERO: numero
         });
     }
 
     /**
-     * Lista todos os números DID da conta
+     * Contrata o DID informado e encaminha para o Sip Trunk indicado no campo SIP_TRUNK
+     * @param {string} cn - CN do DID
+     * @param {string} numero - Número do DID
+     * @param {number} sipTrunk - ID do Sip Trunk (opcional, 0 = cria usuário SIP)
+     * @param {number} idClienteBilling - ID do cliente billing (opcional)
+     * @returns {Promise<Object>} Resultado da aquisição
      */
-    async getMeusNumeros(params = {}) {
-        // Nota: Endpoint pode não existir na API pública
-        // Verificar documentação completa da BRDID
-        try {
-            return this.request('GET', '/listar_meus_numeros', null, params);
-        } catch (error) {
-            // Se o endpoint não existir, retorna array vazio
-            if (error.statusCode === 404) {
-                return [];
-            }
-            throw error;
-        }
+    async adquirirNovoDID(cn, numero, sipTrunk = 0, idClienteBilling = null) {
+        const params = { CN: cn, NUMERO: numero };
+        if (sipTrunk !== null) params.SIP_TRUNK = sipTrunk;
+        if (idClienteBilling) params['ID CLIENTE BILLING'] = idClienteBilling;
+        return this.request('POST', '/adquirir_novo_did', null, params);
     }
 
     /**
-     * Busca informações de um número específico
+     * Cancela um DID existente
+     * @param {string} cn - CN do DID
+     * @param {string} numero - Número do DID a ser cancelado
+     * @returns {Promise<Object>} Resultado do cancelamento
      */
-    async getNumero(numero) {
-        // Nota: Endpoint pode não existir na API pública
-        try {
-            return this.request('GET', `/consultar_numero`, null, { NUMERO: numero });
-        } catch (error) {
-            if (error.statusCode === 404) {
-                throw {
-                    success: false,
-                    error: 'Número não encontrado ou endpoint não disponível',
-                    statusCode: 404,
-                };
-            }
-            throw error;
-        }
-    }
-
-    /**
-     * Compra um número DID
-     */
-    async comprarNumero(numero, configuracoes = {}) {
-        // Nota: Endpoint de compra requer autenticação específica
-        return this.request('POST', '/comprar_numero', {
-            NUMERO: numero,
-            ...configuracoes,
+    async cancelarDID(cn, numero) {
+        return this.request('POST', '/cancelar_did', null, {
+            CN: cn,
+            NUMERO: numero
         });
     }
 
     /**
-     * Configura um número DID existente
+     * Configura webhook para capturar código do WhatsApp
+     * @param {string} numero - Número (DID) que será configurado para uso com o WhatsApp
+     * @param {string} urlRetorno - URL de webhook que receberá os dados da verificação via POST
+     * @returns {Promise<Object>} Status da configuração
      */
-    async configurarNumero(numero, configuracoes) {
-        return this.request('PUT', `/configurar_numero`, {
-            NUMERO: numero,
-            ...configuracoes,
-        });
-    }
-
-    /**
-     * Cancela/Remove um número DID
-     */
-    async cancelarNumero(numero) {
-        return this.request('DELETE', `/cancelar_numero`, null, { NUMERO: numero });
-    }
-
-    // ==================== WHATSAPP ====================
-
-    /**
-     * Lista números WhatsApp
-     */
-    async getWhatsAppNumeros(params = {}) {
-        return this.request('GET', '/whatsapp/numeros', null, params);
-    }
-
-    /**
-     * Busca informações de um número WhatsApp específico
-     */
-    async getWhatsAppNumero(numero) {
-        return this.request('GET', `/whatsapp/${numero}`);
-    }
-
-    /**
-     * Ativa WhatsApp em um número
-     */
-    async ativarWhatsApp(numero, configuracoes = {}) {
-        return this.request('POST', '/whatsapp/ativar', {
+    async configurarWhatsApp(numero, urlRetorno) {
+        return this.request('POST', '/whatsapp_configurar', null, {
             numero,
-            ...configuracoes,
+            url_retorno: urlRetorno
         });
     }
 
     /**
-     * Configura número WhatsApp
+     * Configurar um número para receber ligações do número contratado
+     * @param {string} numero - Número DID da sua conta (ex: 1131119999, CN+Numero)
+     * @param {string} numeroTransferir - Número para o qual as ligações serão transferidas (ex: 11999999191)
+     * @returns {Promise<Object>} Status da configuração
      */
-    async configurarWhatsApp(numero, configuracoes) {
-        return this.request('PUT', `/whatsapp/${numero}/configurar`, configuracoes);
+    async configurarSigaMe(numero, numeroTransferir) {
+        return this.request('POST', '/configurar_siga_me', null, {
+            NUMERO: numero,
+            NUMERO_TRANSFERIR: numeroTransferir
+        });
     }
 
     /**
-     * Desativa WhatsApp de um número
+     * Desconfigurar o encaminhamento de ligações de um número contratado
+     * @param {string} numero - Número DID da sua conta (ex: 1131319999, CN+Numero)
+     * @returns {Promise<Object>} Status da desconfiguração
      */
-    async desativarWhatsApp(numero) {
-        return this.request('DELETE', `/whatsapp/${numero}`);
+    async desconfigurarSigaMe(numero) {
+        return this.request('POST', '/desconfigurar_siga_me', null, {
+            NUMERO: numero
+        });
+    }
+
+    /**
+     * Busca Logs de Chamadas por Número
+     * @param {string} numero - Número que deseja buscar o log (ex: 08000420203)
+     * @param {string} periodo - Período do log no formato MMAAAA (ex: 052023)
+     * @returns {Promise<Array>} Logs de chamadas
+     */
+    async getDIDsCDRs(numero, periodo) {
+        return this.request('GET', '/get_dids_cdrs', null, {
+            NUMERO: numero,
+            PERIODO: periodo
+        });
     }
 
     // ==================== SMS ====================
 
     /**
-     * Envia um SMS
+     * Envie uma mensagem para um lote de até 20.000 destinos por requisição
+     * @param {string} numeros - Lista de números de destino separado por vírgula
+     * @param {number} idLayout - ID do layout da mensagem enviada
+     * @returns {Promise<Array>} Resultado do envio
      */
-    async enviarSMS(data) {
-        return this.request('POST', '/sms/enviar', data);
+    async enviarSMS(numeros, idLayout) {
+        return this.request('POST', '/enviar_sms', null, {
+            NUMEROS: numeros,
+            ID_LAYOUT: idLayout
+        });
     }
 
     /**
-     * Lista SMS enviados
+     * Cadastra um novo layout de mensagem
+     * @param {Object} body - Objeto contendo a mensagem do layout
+     * @returns {Promise<Object>} ID e status do layout criado
      */
-    async getSMSEnviados(params = {}) {
-        return this.request('GET', '/sms/enviados', null, params);
+    async cadastrarLayoutSMS(body) {
+        return this.request('POST', '/cadastrar_layout_sms', body);
     }
 
     /**
-     * Lista SMS recebidos
+     * Consulta layouts aprovados
+     * @param {number} idLayout - ID do layout a ser consultado (opcional)
+     * @returns {Promise<Object>} Dados do layout
      */
-    async getSMSRecebidos(params = {}) {
-        return this.request('GET', '/sms/recebidos', null, params);
+    async consultarLayoutSMS(idLayout = null) {
+        const params = idLayout ? { ID_LAYOUT: idLayout } : {};
+        return this.request('GET', '/consultar_layout_sms', null, params);
+    }
+
+    // ==================== BILLING CLIENTES ====================
+
+    /**
+     * Cria um novo plano
+     * @param {Object} planoData - Dados do plano
+     * @returns {Promise<Object>} Resultado da criação
+     */
+    async criarPlano(planoData) {
+        return this.request('POST', '/criar_plano', null, planoData);
     }
 
     /**
-     * Busca status de um SMS
+     * Cria um novo cliente no grupo de Billing
+     * @param {Object} clienteData - Dados do cliente
+     * @returns {Promise<Object>} Resultado da criação
      */
-    async getStatusSMS(smsId) {
-        return this.request('GET', `/sms/${smsId}/status`);
-    }
-
-    // ==================== BILLING ====================
-
-    /**
-     * Obtém saldo da conta
-     */
-    async getSaldo() {
-        try {
-            return this.request('GET', '/verificar_saldo');
-        } catch (error) {
-            if (error.statusCode === 404) {
-                return { saldo: 0, message: 'Endpoint não disponível na API pública' };
-            }
-            throw error;
-        }
+    async criarCliente(clienteData) {
+        return this.request('POST', '/criar_cliente', null, clienteData);
     }
 
     /**
-     * Lista transações/extrato
+     * Vincule DIDs e um plano a um cliente
+     * @param {number} idPlano - ID do Plano criado
+     * @param {number} idCliente - ID do cliente criado
+     * @param {string} listaDids - Listagem de dids (CN + Número) separados por vírgula
+     * @returns {Promise<Object>} Resultado do vínculo
      */
-    async getExtrato(params = {}) {
-        try {
-            return this.request('GET', '/extrato', null, params);
-        } catch (error) {
-            if (error.statusCode === 404) {
-                return [];
-            }
-            throw error;
-        }
+    async montarClientePlanoDIDs(idPlano, idCliente, listaDids) {
+        return this.request('POST', '/montar_cliente_plano_dids', null, {
+            'ID PLANO': idPlano,
+            'ID CLIENTE': idCliente,
+            'LISTA DE DIDS': listaDids
+        });
     }
 
     /**
-     * Lista faturas
+     * Lista grupo de clientes
+     * @returns {Promise<Array>} Lista de clientes
      */
-    async getFaturas(params = {}) {
-        try {
-            return this.request('GET', '/faturas', null, params);
-        } catch (error) {
-            if (error.statusCode === 404) {
-                return [];
-            }
-            throw error;
-        }
+    async listarClientes() {
+        return this.request('GET', '/listar_clientes');
     }
 
     /**
-     * Obtém detalhes de uma fatura específica
+     * Lista Planos Billing
+     * @returns {Promise<Array>} Lista de planos
      */
-    async getFatura(faturaId) {
-        try {
-            return this.request('GET', `/faturas/${faturaId}`);
-        } catch (error) {
-            if (error.statusCode === 404) {
-                throw {
-                    success: false,
-                    error: 'Fatura não encontrada ou endpoint não disponível',
-                    statusCode: 404,
-                };
-            }
-            throw error;
-        }
-    }
-
-    // ==================== CLIENTES ====================
-
-    /**
-     * Lista clientes (subcontas)
-     */
-    async getClientes(params = {}) {
-        return this.request('GET', '/clientes', null, params);
-    }
-
-    /**
-     * Cria novo cliente
-     */
-    async criarCliente(data) {
-        return this.request('POST', '/clientes', data);
-    }
-
-    /**
-     * Obtém informações de um cliente
-     */
-    async getCliente(clienteId) {
-        return this.request('GET', `/clientes/${clienteId}`);
-    }
-
-    /**
-     * Atualiza informações de um cliente
-     */
-    async atualizarCliente(clienteId, data) {
-        return this.request('PUT', `/clientes/${clienteId}`, data);
-    }
-
-    /**
-     * Remove um cliente
-     */
-    async removerCliente(clienteId) {
-        return this.request('DELETE', `/clientes/${clienteId}`);
+    async listarPlanos() {
+        return this.request('GET', '/listar_planos');
     }
 }
 

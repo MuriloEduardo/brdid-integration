@@ -6,146 +6,51 @@ const didController = require('../controllers/did.controller');
  * @swagger
  * tags:
  *   name: DID
- *   description: Gerenciamento de números DID (VoIP)
+ *   description: Gerenciamento de números DID
  */
 
 /**
  * @swagger
- * /api/did/disponiveis:
+ * /api/did/numeros:
  *   get:
- *     summary: Lista números DID disponíveis para compra
+ *     summary: Busca DIDs por área local (limitado a 100)
  *     tags: [DID]
  *     parameters:
- *       - in: query
- *         name: ddd
+ *       - name: areaLocal
+ *         in: query
+ *         required: true
  *         schema:
  *           type: string
- *         description: DDD da localidade desejada (ex. 11, 51)
- *         example: "51"
- *       - in: query
- *         name: areaLocal
- *         schema:
- *           type: string
- *         description: Nome da área local (ex. "Porto Alegre", "São Paulo")
  *         example: "Porto Alegre"
- *       - in: query
- *         name: quantity
- *         schema:
- *           type: integer
- *           default: 10
- *         description: Quantidade de números a retornar
- *         example: 10
  *     responses:
  *       200:
  *         description: Lista de números disponíveis
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       numero:
- *                         type: string
- *                         example: "551199999999"
- *                       ddd:
- *                         type: string
- *                         example: "11"
- *                       preco:
- *                         type: number
- *                         example: 15.00
- *       400:
- *         description: DDD ou areaLocal não informado
- *       500:
- *         description: Erro no servidor
  */
-router.get('/disponiveis', didController.listarNumerosDisponiveis);
-
-/**
- * @swagger
- * /api/did/meus-numeros:
- *   get:
- *     summary: Lista todos os números DID da conta
- *     tags: [DID]
- *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *         description: Página da paginação
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *         description: Limite de resultados por página
- *     responses:
- *       200:
- *         description: Lista de números da conta
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       numero:
- *                         type: string
- *                         example: "551199999999"
- *                       ddd:
- *                         type: string
- *                         example: "11"
- *                       status:
- *                         type: string
- *                         example: "ativo"
- *                       dataCompra:
- *                         type: string
- *                         format: date-time
- *       500:
- *         description: Erro no servidor
- */
-router.get('/meus-numeros', didController.listarMeusNumeros);
+router.get('/numeros', didController.buscarNumerosByAreaLocal);
 
 /**
  * @swagger
  * /api/did/{numero}:
  *   get:
- *     summary: Busca informações de um número específico
+ *     summary: Busca dados do DID
  *     tags: [DID]
  *     parameters:
- *       - in: path
- *         name: numero
+ *       - name: numero
+ *         in: path
  *         required: true
  *         schema:
  *           type: string
- *         description: Número DID completo
- *         example: "551199999999"
  *     responses:
  *       200:
- *         description: Informações do número
- *       404:
- *         description: Número não encontrado
- *       500:
- *         description: Erro no servidor
+ *         description: Dados do DID
  */
-router.get('/:numero', didController.buscarNumero);
+router.get('/:numero', didController.consultarDID);
 
 /**
  * @swagger
- * /api/did/comprar:
+ * /api/did:
  *   post:
- *     summary: Compra um número DID
+ *     summary: Adquire novo DID
  *     tags: [DID]
  *     requestBody:
  *       required: true
@@ -153,103 +58,105 @@ router.get('/:numero', didController.buscarNumero);
  *         application/json:
  *           schema:
  *             type: object
- *             required:
- *               - numero
+ *             required: [cn, numero]
+ *             properties:
+ *               cn:
+ *                 type: string
+ *               numero:
+ *                 type: string
+ *               sipTrunk:
+ *                 type: number
+ *               idClienteBilling:
+ *                 type: number
+ *     responses:
+ *       201:
+ *         description: DID adquirido com sucesso
+ *   delete:
+ *     summary: Cancela um DID
+ *     tags: [DID]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [cn, numero]
+ *             properties:
+ *               cn:
+ *                 type: string
+ *               numero:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: DID cancelado com sucesso
+ */
+router.post('/', didController.adquirirNovoDID);
+router.delete('/', didController.cancelarDID);
+
+/**
+ * @swagger
+ * /api/did/siga-me:
+ *   post:
+ *     summary: Configurar encaminhamento de ligações
+ *     tags: [DID]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [numero, numeroTransferir]
  *             properties:
  *               numero:
  *                 type: string
- *                 example: "551199999999"
- *               webhook:
+ *               numeroTransferir:
  *                 type: string
- *                 example: "https://api.atendimentobr.com/webhook/brdid"
- *               destino:
- *                 type: string
- *                 example: "sip:user@domain.com"
  *     responses:
- *       201:
- *         description: Número comprado com sucesso
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "Número comprado com sucesso"
- *                 data:
- *                   type: object
- *       400:
- *         description: Dados inválidos
- *       500:
- *         description: Erro no servidor
- */
-router.post('/comprar', didController.comprarNumero);
-
-/**
- * @swagger
- * /api/did/{numero}/configurar:
- *   put:
- *     summary: Configura um número DID existente
+ *       200:
+ *         description: Siga-me configurado
+ *   delete:
+ *     summary: Desconfigurar encaminhamento
  *     tags: [DID]
- *     parameters:
- *       - in: path
- *         name: numero
- *         required: true
- *         schema:
- *           type: string
- *         description: Número DID completo
- *         example: "551199999999"
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [numero]
  *             properties:
- *               webhook:
+ *               numero:
  *                 type: string
- *                 example: "https://api.atendimentobr.com/webhook/brdid"
- *               destino:
- *                 type: string
- *                 example: "sip:user@domain.com"
- *               habilitarGravacao:
- *                 type: boolean
- *                 example: true
  *     responses:
  *       200:
- *         description: Número configurado com sucesso
- *       404:
- *         description: Número não encontrado
- *       500:
- *         description: Erro no servidor
+ *         description: Siga-me desconfigurado
  */
-router.put('/:numero/configurar', didController.configurarNumero);
+router.post('/siga-me', didController.configurarSigaMe);
+router.delete('/siga-me', didController.desconfigurarSigaMe);
 
 /**
  * @swagger
- * /api/did/{numero}:
- *   delete:
- *     summary: Cancela/Remove um número DID
+ * /api/did/cdrs:
+ *   get:
+ *     summary: Busca logs de chamadas
  *     tags: [DID]
  *     parameters:
- *       - in: path
- *         name: numero
+ *       - name: numero
+ *         in: query
  *         required: true
  *         schema:
  *           type: string
- *         description: Número DID completo
- *         example: "551199999999"
+ *         example: "08000420203"
+ *       - name: periodo
+ *         in: query
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "052023"
  *     responses:
  *       200:
- *         description: Número cancelado com sucesso
- *       404:
- *         description: Número não encontrado
- *       500:
- *         description: Erro no servidor
+ *         description: Logs de chamadas
  */
-router.delete('/:numero', didController.cancelarNumero);
+router.get('/cdrs', didController.getDIDsCDRs);
 
 module.exports = router;

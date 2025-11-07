@@ -29,19 +29,16 @@ this.client.interceptors.request.use((config) => {
 
 `BRDIDService` (singleton) handles ALL external API calls. Key patterns:
 
-1. **Graceful degradation**: Methods catch 404s and return empty arrays for unavailable endpoints
-2. **Dual parameter support**: Accept both `ddd` (DDD code) and `areaLocal` (city name) where applicable
+1. **Direct API mapping**: All 17 methods map 1:1 to real BRDID endpoints
+2. **No graceful degradation**: All endpoints are verified to exist in official API
 3. **Consistent error format**: Always throw `{ success: false, error: string, statusCode: number }`
 
 Example from `src/services/brdid.service.js`:
 ```javascript
-async getMeusNumeros(params = {}) {
-  try {
-    return this.request('GET', '/listar_meus_numeros', null, params);
-  } catch (error) {
-    if (error.statusCode === 404) return [];  // Graceful degradation
-    throw error;
-  }
+async buscarNumerosByAreaLocal(areaLocal) {
+  return this.request('GET', '/buscar_numeros_by_area_local', null, {
+    AREA_LOCAL: areaLocal
+  });
 }
 ```
 
@@ -81,18 +78,34 @@ router.get('/disponiveis', didController.listarNumerosDisponiveis);
 
 When adding endpoints, **always** add Swagger JSDoc above the route definition.
 
-## Known BRDID API Limitations
+## BRDID API - Real Endpoints (17 Total)
 
-⚠️ **Critical**: Most BRDID endpoints return 404 in public API. Only confirmed working:
-- `buscar_numeros_by_area_local` - Search numbers by city name ✅
+**All endpoints verified from official API**: https://brdid.com.br/api-docs/brdid-api.json
 
-These are **implemented but may not work** without private API access:
-- `buscar_numeros_by_ddd` - Search by area code (404)
-- `listar_areas_locais` - List all areas (404)
-- `listar_meus_numeros` - List account numbers (404)
-- `verificar_saldo` - Check balance (404)
+### Localidades (1)
+- `GET /buscar_localidades` - Busca localidades com DIDS disponíveis
 
-See service methods with try/catch 404 handling for graceful degradation examples.
+### DID (8)
+- `GET /buscar_numeros_by_area_local` - Busca DIDs por área local (limitado a 100)
+- `GET /consultar_did` - Busca dados do DID
+- `POST /adquirir_novo_did` - Contrata DID e encaminha para Sip Trunk
+- `POST /cancelar_did` - Cancela um DID existente
+- `POST /whatsapp_configurar` - Configura webhook para capturar código WhatsApp
+- `POST /configurar_siga_me` - Configurar encaminhamento de ligações
+- `POST /desconfigurar_siga_me` - Desconfigurar encaminhamento
+- `GET /get_dids_cdrs` - Busca Logs de Chamadas por Número
+
+### SMS (3)
+- `POST /enviar_sms` - Envia SMS para até 20.000 destinos
+- `POST /cadastrar_layout_sms` - Cadastra novo layout de mensagem
+- `GET /consultar_layout_sms` - Consulta layouts aprovados
+
+### Billing Clientes (5)
+- `POST /criar_plano` - Cria um novo plano
+- `GET /listar_planos` - Lista Planos Billing
+- `POST /criar_cliente` - Cria novo cliente no grupo de Billing
+- `GET /listar_clientes` - Lista grupo de clientes
+- `POST /montar_cliente_plano_dids` - Vincula DIDs e plano a cliente
 
 ## Testing Workflow
 
@@ -136,14 +149,14 @@ PORT=3000
 **Example** (adding new DID endpoint):
 ```javascript
 // 1. Service (src/services/brdid.service.js)
-async getNumeroDetails(numero) {
-  return this.request('GET', '/consultar_numero', null, { NUMERO: numero });
+async consultarDID(numero) {
+  return this.request('GET', '/consultar_did', null, { NUMERO: numero });
 }
 
 // 2. Controller (src/controllers/did.controller.js)
-async buscarDetalhes(req, res) {
+async consultarDID(req, res) {
   try {
-    const result = await brdidService.getNumeroDetails(req.params.numero);
+    const result = await brdidService.consultarDID(req.params.numero);
     res.json({ success: true, data: result });
   } catch (error) {
     res.status(error.statusCode || 500).json({ success: false, error: error.error });
@@ -153,12 +166,12 @@ async buscarDetalhes(req, res) {
 // 3. Route with Swagger (src/routes/did.routes.js)
 /**
  * @swagger
- * /api/did/{numero}/detalhes:
+ * /api/did/{numero}:
  *   get:
- *     summary: Busca detalhes de um número
+ *     summary: Busca dados do DID
  *     tags: [DID]
  */
-router.get('/:numero/detalhes', didController.buscarDetalhes);
+router.get('/:numero', didController.consultarDID);
 ```
 
 ## Project Structure Convention
@@ -191,7 +204,7 @@ Scripts use **bash with emoji output** - maintain this style for consistency.
 1. **Why singleton service?** - Single BRDID account, no multi-tenancy needed
 2. **Why query param auth?** - BRDID API requirement, not REST best practice
 3. **Why custom test classes?** - Quick validation without test framework overhead
-4. **Why graceful 404 handling?** - BRDID public API has limited endpoints
+4. **Why 17 endpoints only?** - All verified against official BRDID API documentation
 5. **Why Portuguese?** - Brazilian client, BRDID API returns PT responses
 
 ## Common Pitfalls
@@ -199,12 +212,12 @@ Scripts use **bash with emoji output** - maintain this style for consistency.
 ❌ Don't add Authorization headers to BRDID requests
 ❌ Don't use jest.describe() - tests are plain classes
 ❌ Don't skip Swagger JSDoc - it's mandatory for all routes
-❌ Don't assume BRDID endpoints work - check `API_STATUS.md` first
+❌ Don't assume BRDID endpoints work - check official API at https://brdid.com.br/api-docs
 ❌ Don't return raw data - always use `{ success, data, error }` format
 
 ## Quick Reference
 
 - Swagger UI: `http://localhost:3000/api-docs`
-- Working endpoint: `GET /api/localidades/Porto%20Alegre`
-- Test endpoint: `curl "http://localhost:3000/api/localidades/Porto%20Alegre"`
+- Working endpoint: `GET /api/did/numeros?areaLocal=Porto%20Alegre`
+- Test endpoint: `curl "http://localhost:3000/api/did/numeros?areaLocal=Porto%20Alegre"`
 - Logs: Terminal output (no file logging configured)

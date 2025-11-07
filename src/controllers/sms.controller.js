@@ -5,84 +5,62 @@ const brdidService = require('../services/brdid.service');
  */
 class SMSController {
     /**
-     * Envia um SMS
+     * Envie uma mensagem para um lote de até 20.000 destinos por requisição
      */
     async enviarSMS(req, res) {
         try {
-            const { origem, destino, mensagem } = req.body;
-
-            if (!origem || !destino || !mensagem) {
+            const { numeros, idLayout } = req.body;
+            if (!numeros || !idLayout) {
                 return res.status(400).json({
                     success: false,
-                    error: 'Origem, destino e mensagem são obrigatórios',
+                    error: 'NUMEROS e ID_LAYOUT são obrigatórios'
                 });
             }
-
-            const result = await brdidService.enviarSMS(req.body);
-            res.status(201).json({
-                success: true,
+            const result = await brdidService.enviarSMS(numeros, idLayout);
+            res.status(201).json({ 
+                success: true, 
                 data: result,
-                message: 'SMS enviado com sucesso',
+                message: 'SMS enviado com sucesso'
             });
         } catch (error) {
             res.status(error.statusCode || 500).json({
                 success: false,
-                error: error.error || 'Erro ao enviar SMS',
+                error: error.error || 'Erro ao enviar SMS'
             });
         }
     }
 
     /**
-     * Lista SMS enviados
+     * Cadastra um novo layout de mensagem
      */
-    async listarSMSEnviados(req, res) {
+    async cadastrarLayoutSMS(req, res) {
         try {
-            const result = await brdidService.getSMSEnviados(req.query);
-            res.json({
-                success: true,
+            const result = await brdidService.cadastrarLayoutSMS(req.body);
+            res.status(201).json({ 
+                success: true, 
                 data: result,
+                message: 'Layout cadastrado com sucesso'
             });
         } catch (error) {
             res.status(error.statusCode || 500).json({
                 success: false,
-                error: error.error || 'Erro ao buscar SMS enviados',
+                error: error.error || 'Erro ao cadastrar layout'
             });
         }
     }
 
     /**
-     * Lista SMS recebidos
+     * Consulta layouts aprovados
      */
-    async listarSMSRecebidos(req, res) {
+    async consultarLayoutSMS(req, res) {
         try {
-            const result = await brdidService.getSMSRecebidos(req.query);
-            res.json({
-                success: true,
-                data: result,
-            });
+            const { idLayout } = req.query;
+            const result = await brdidService.consultarLayoutSMS(idLayout);
+            res.json({ success: true, data: result });
         } catch (error) {
             res.status(error.statusCode || 500).json({
                 success: false,
-                error: error.error || 'Erro ao buscar SMS recebidos',
-            });
-        }
-    }
-
-    /**
-     * Busca status de um SMS
-     */
-    async buscarStatusSMS(req, res) {
-        try {
-            const { smsId } = req.params;
-            const result = await brdidService.getStatusSMS(smsId);
-            res.json({
-                success: true,
-                data: result,
-            });
-        } catch (error) {
-            res.status(error.statusCode || 500).json({
-                success: false,
-                error: error.error || 'Erro ao buscar status do SMS',
+                error: error.error || 'Erro ao consultar layout'
             });
         }
     }
