@@ -1,39 +1,41 @@
 # AtendimentoBR - BRDID Proxy API
 
-> 📚 **Novo aqui?** Comece pelo [Guia de Início Rápido (QUICKSTART.md)](QUICKSTART.md)  
-> 📖 **Documentação completa:** Veja o [Índice de Documentação (INDEX.md)](INDEX.md)
-
-API Proxy serverless para integração com BRDID, provedor de números VoIP, WhatsApp e SMS. Esta API abstrai toda a complexidade da plataforma BRDID para a plataforma AtendimentoBR.
+API Proxy para integração com BRDID, provedor de números VoIP, WhatsApp e SMS. Esta API abstrai a complexidade da plataforma BRDID com uma interface REST consistente e documentação Swagger automática.
 
 ## 🚀 Funcionalidades
 
-- **Localidades**: Consulta de DDDs e localidades disponíveis
-- **DID (Números VoIP)**: 
-  - Listagem de números disponíveis por DDD
-  - Compra de números
-  - Configuração de números
-  - Gerenciamento de números ativos
-- **WhatsApp**: 
-  - Ativação de WhatsApp em números
-  - Configuração de webhooks
-  - Gerenciamento de números WhatsApp
-- **SMS**: 
-  - Envio de SMS
-  - Listagem de SMS enviados e recebidos
-  - Consulta de status de envio
-- **Billing**: 
-  - Consulta de saldo
-  - Extrato de transações
-  - Gerenciamento de faturas
-- **Clientes**: 
-  - Gerenciamento de subcontas
-  - CRUD completo de clientes
+### 📍 Localidades (1 endpoint)
+- Busca localidades com DIDs disponíveis
+
+### 📞 DID - Números VoIP (8 endpoints)
+- Busca números disponíveis por área local (limitado a 100)
+- Consulta dados de DID específico
+- Aquisição de novos DIDs
+- Cancelamento de DIDs
+- Configuração de encaminhamento (Siga-me)
+- Configuração de webhook WhatsApp
+- Consulta de logs de chamadas (CDRs)
+
+### 💬 WhatsApp (1 endpoint)
+- Configuração de webhook para captura de código de verificação
+
+### 📱 SMS (3 endpoints)
+- Envio de SMS em lote (até 20.000 destinos)
+- Cadastro de layouts de mensagem
+- Consulta de layouts aprovados
+
+### 💰 Billing Clientes (5 endpoints)
+- Criação e listagem de planos
+- Criação e listagem de clientes
+- Vinculação de DIDs e planos a clientes
+
+**Total: 17 endpoints reais verificados contra a API oficial BRDID**
 
 ## 📋 Pré-requisitos
 
 - Node.js (versão 16 ou superior)
 - npm ou yarn
-- Conta ativa na BRDID com API Key e Secret
+- Conta ativa na BRDID com TOKEN de API
 
 ## 🔧 Instalação
 
@@ -61,7 +63,7 @@ PORT=3000
 NODE_ENV=development
 ```
 
-**Nota**: O token já está configurado no `.env.example` para testes. Em produção, use suas próprias credenciais.
+**Nota Importante**: O TOKEN da BRDID tem formato `base64string:hexhash` (separado por dois pontos).
 
 ## 🚀 Executando o projeto
 
@@ -79,76 +81,71 @@ A API estará disponível em `http://localhost:3000`
 
 ## 🧪 Testando a API
 
-### Testes automatizados de integração com BRDID:
+### Verificação do ambiente:
+```bash
+npm run verify
+```
+
+### Testes de integração:
 ```bash
 npm run test:integration
 ```
 
-### Testes do proxy (requer servidor rodando):
-Em um terminal, inicie o servidor:
+### Teste rápido:
 ```bash
-npm run dev
+# Com o servidor rodando:
+curl "http://localhost:3000/api/localidades"
+curl "http://localhost:3000/api/did/numeros?areaLocal=Porto%20Alegre"
 ```
 
-Em outro terminal, execute os testes:
-```bash
-npm run test:proxy
-```
+## 📚 Documentação Swagger
 
-### Teste rápido com curl:
-```bash
-# Teste direto na API BRDID
-bash tests/quick-test.sh
+A documentação completa da API está disponível via Swagger UI:
 
-# Com o servidor rodando, teste o proxy:
-curl "http://localhost:3000/api/localidades/Porto%20Alegre"
-curl "http://localhost:3000/api/did/disponiveis?areaLocal=Porto%20Alegre&quantity=5"
-```
+**URL**: `http://localhost:3000/api-docs`
 
-## 📚 Documentação
+A documentação é gerada automaticamente a partir dos comentários JSDoc nas rotas.
 
-A documentação completa da API está disponível via Swagger UI após iniciar o servidor:
-
-**URL da documentação**: `http://localhost:3000/api-docs`
-
-## 🛣️ Principais Endpoints
+## 🛣️ Endpoints Disponíveis
 
 ### Localidades
-- `GET /api/localidades` - Lista todas as localidades/DDDs
-- `GET /api/localidades/:areaLocal` - Busca números em uma área local específica (ex: "Porto Alegre")
+```
+GET /api/localidades
+```
+Busca todas as localidades com DIDs disponíveis.
 
 ### DID (Números VoIP)
-- `GET /api/did/disponiveis?areaLocal=Porto%20Alegre` - Lista números disponíveis por área local
-- `GET /api/did/disponiveis?ddd=51` - Lista números disponíveis por DDD (se disponível)
-- `GET /api/did/meus-numeros` - Lista seus números ativos
-- `POST /api/did/comprar` - Compra um número
-- `PUT /api/did/:numero/configurar` - Configura um número
-- `DELETE /api/did/:numero` - Cancela um número
+```
+GET    /api/did/numeros?areaLocal=Porto%20Alegre
+GET    /api/did/:numero
+POST   /api/did
+DELETE /api/did
+POST   /api/did/siga-me
+DELETE /api/did/siga-me
+GET    /api/did/cdrs?numero=X&periodo=MMAAAA
+```
 
 ### WhatsApp
-- `GET /api/whatsapp/numeros` - Lista números WhatsApp
-- `POST /api/whatsapp/ativar` - Ativa WhatsApp em um número
-- `PUT /api/whatsapp/:numero/configurar` - Configura número WhatsApp
-- `DELETE /api/whatsapp/:numero` - Desativa WhatsApp
+```
+POST /api/whatsapp/configurar
+```
+Configura webhook para capturar código de verificação do WhatsApp Business.
 
 ### SMS
-- `POST /api/sms/enviar` - Envia um SMS
-- `GET /api/sms/enviados` - Lista SMS enviados
-- `GET /api/sms/recebidos` - Lista SMS recebidos
-- `GET /api/sms/:smsId/status` - Consulta status de um SMS
+```
+POST /api/sms
+POST /api/sms/layouts
+GET  /api/sms/layouts?idLayout=X
+```
 
-### Billing
-- `GET /api/billing/saldo` - Consulta saldo da conta
-- `GET /api/billing/extrato` - Lista transações
-- `GET /api/billing/faturas` - Lista faturas
-- `GET /api/billing/faturas/:faturaId` - Detalhes de uma fatura
-
-### Clientes
-- `GET /api/clientes` - Lista clientes
-- `POST /api/clientes` - Cria novo cliente
-- `GET /api/clientes/:clienteId` - Busca cliente específico
-- `PUT /api/clientes/:clienteId` - Atualiza cliente
-- `DELETE /api/clientes/:clienteId` - Remove cliente
+### Billing Clientes
+```
+POST /api/billing/planos
+GET  /api/billing/planos
+POST /api/billing/clientes
+GET  /api/billing/clientes
+POST /api/billing/vincular
+```
 
 ## 📦 Estrutura do Projeto
 
@@ -156,50 +153,128 @@ A documentação completa da API está disponível via Swagger UI após iniciar 
 brdid-integration/
 ├── src/
 │   ├── config/           # Configurações (env, swagger)
-│   ├── controllers/      # Controladores das rotas
-│   ├── routes/           # Definição de rotas
-│   ├── services/         # Serviços de integração (BRDID)
-│   ├── app.js            # Configuração do Express
-│   └── server.js         # Inicialização do servidor
-├── .env.example          # Exemplo de variáveis de ambiente
+│   ├── controllers/      # Controladores (6 arquivos)
+│   ├── routes/           # Rotas com Swagger JSDoc (7 arquivos)
+│   ├── services/         # brdid.service.js (singleton)
+│   ├── app.js            # Setup Express
+│   └── server.js         # Inicialização HTTP
+├── tests/                # Testes de integração
+├── .env.example          # Template de variáveis
 ├── .gitignore
 ├── package.json
 └── README.md
 ```
 
-## 🔒 Segurança
+## � Autenticação
 
-- As credenciais da BRDID são armazenadas em variáveis de ambiente
-- A API utiliza Helmet para segurança HTTP
-- CORS configurado para permitir requisições controladas
-- Validação de entrada em todos os endpoints críticos
+A API BRDID usa **TOKEN como query parameter** (não header). O proxy gerencia isso automaticamente:
 
-## 🌐 Exemplo de Uso
-
-### Listar números disponíveis para compra (por área local):
-```bash
-curl "http://localhost:3000/api/localidades/Porto%20Alegre"
+```javascript
+// Configurado em brdid.service.js
+this.client.interceptors.request.use((config) => {
+  config.params.TOKEN = this.token;  // Adiciona automaticamente
+  return config;
+});
 ```
 
-Ou pelo endpoint específico:
+**Importante**: Usuários do proxy **não** precisam enviar o TOKEN - ele é injetado automaticamente em todas as requisições para a API BRDID.
+
+## 🌐 Exemplos de Uso
+
+### Listar localidades disponíveis:
 ```bash
-curl "http://localhost:3000/api/did/disponiveis?areaLocal=Porto%20Alegre&quantity=5"
+curl "http://localhost:3000/api/localidades"
 ```
 
-### Resposta esperada:
+### Buscar números disponíveis:
+```bash
+curl "http://localhost:3000/api/did/numeros?areaLocal=Porto%20Alegre"
+```
+
+### Consultar DID específico:
+```bash
+curl "http://localhost:3000/api/did/51999999999"
+```
+
+### Adquirir novo DID:
+```bash
+curl -X POST "http://localhost:3000/api/did" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "cn": "51",
+    "numero": "999999999",
+    "sipTrunk": 0
+  }'
+```
+
+### Enviar SMS:
+```bash
+curl -X POST "http://localhost:3000/api/sms" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "numeros": "5199999999,5188888888",
+    "idLayout": 123
+  }'
+```
+
+## 📊 Formato de Resposta
+
+Todas as respostas seguem o padrão:
+
+### Sucesso:
 ```json
 {
   "success": true,
-  "data": [
-    {
-      "CODIGO": "3262947",
-      "VALOR_MENSAL": "26.30",
-      "VALOR_INSTALACAO": "26.30",
-      "CN": "43",
-      "NUMERO": "2018-1390",
-      "GOLD": "0",
-      "SUPER_GOLD": "0",
-      "DIAMANTE": "0"
+  "data": { ... },
+  "message": "Operação realizada com sucesso"
+}
+```
+
+### Erro:
+```json
+{
+  "success": false,
+  "error": "Descrição do erro"
+}
+```
+
+## 🔍 Verificação de Endpoints
+
+Todos os 17 endpoints foram verificados contra a especificação oficial da API BRDID:
+- **Documentação oficial**: https://brdid.com.br/api-docs
+- **Spec JSON**: https://brdid.com.br/api-docs/brdid-api.json
+
+## 🛠️ Scripts Disponíveis
+
+```bash
+npm start              # Inicia servidor em produção
+npm run dev            # Inicia com nodemon (auto-reload)
+npm run verify         # Verifica configuração do ambiente
+npm run test:integration # Testa integração com BRDID
+npm run test:proxy     # Testa endpoints do proxy
+```
+
+## ⚠️ Limitações Conhecidas
+
+- Endpoint `buscar_numeros_by_area_local` limitado a 100 DIDs por requisição (limitação da API BRDID)
+- TOKEN deve estar no formato `base64:hash`
+- Alguns endpoints de billing podem requerer permissões especiais na conta BRDID
+
+## 🤝 Contribuindo
+
+1. Fork o projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/NovaFuncionalidade`)
+3. Commit suas mudanças (`git commit -m 'Adiciona nova funcionalidade'`)
+4. Push para a branch (`git push origin feature/NovaFuncionalidade`)
+5. Abra um Pull Request
+
+## 📄 Licença
+
+Este projeto é privado e propriedade da AtendimentoBR.
+
+## 📞 Suporte
+
+Para questões sobre a API BRDID, consulte a documentação oficial em https://brdid.com.br/api-docs
     }
   ]
 }
