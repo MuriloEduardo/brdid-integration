@@ -193,7 +193,6 @@ tests/               # Custom test classes (not Jest framework)
 ## Utility Scripts
 
 - `./start.sh` - Interactive first-run setup
-- `./menu.sh` - Interactive dev menu (8 options)
 - `npm run verify` - Full environment check
 - `npm run dev` - Start with nodemon (auto-reload)
 
