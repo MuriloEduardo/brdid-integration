@@ -15,13 +15,6 @@ const localidadesController = require('../controllers/localidades.controller');
  *   get:
  *     summary: Busca localidades com DIDS disponíveis
  *     tags: [Localidades]
- *     parameters:
- *       - in: query
- *         name: TOKEN
- *         required: true
- *         schema:
- *           type: string
- *         description: Token da sua conta BR DID
  *     responses:
  *       200:
  *         description: Lista de localidades retornada com sucesso
