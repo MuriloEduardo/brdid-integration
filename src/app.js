@@ -18,18 +18,18 @@ app.use(express.urlencoded({ extended: true }));
 
 // Rota raiz
 app.get('/', (req, res) => {
-  res.json({
-    success: true,
-    message: `Bem-vindo à ${config.appName}`,
-    version: '1.0.0',
-    documentation: '/api-docs',
-  });
+    res.json({
+        success: true,
+        message: `Bem-vindo à ${config.appName}`,
+        version: '1.0.0',
+        documentation: '/api-docs',
+    });
 });
 
 // Documentação Swagger
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-  customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: 'AtendimentoBR BRDID API',
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'AtendimentoBR BRDID API',
 }));
 
 // Rotas da API
@@ -37,19 +37,19 @@ app.use('/api', routes);
 
 // Middleware de erro 404
 app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    error: 'Rota não encontrada',
-  });
+    res.status(404).json({
+        success: false,
+        error: 'Rota não encontrada',
+    });
 });
 
 // Middleware de tratamento de erros global
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
-  res.status(err.statusCode || 500).json({
-    success: false,
-    error: err.message || 'Erro interno do servidor',
-  });
+    console.error('Error:', err);
+    res.status(err.statusCode || 500).json({
+        success: false,
+        error: err.message || 'Erro interno do servidor',
+    });
 });
 
 module.exports = app;
