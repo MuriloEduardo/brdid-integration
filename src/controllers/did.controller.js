@@ -9,16 +9,22 @@ class DIDController {
    */
   async listarNumerosDisponiveis(req, res) {
     try {
-      const { ddd, quantity } = req.query;
+      const { ddd, areaLocal, quantity } = req.query;
       
-      if (!ddd) {
+      if (!ddd && !areaLocal) {
         return res.status(400).json({
           success: false,
-          error: 'DDD é obrigatório',
+          error: 'DDD ou areaLocal é obrigatório',
         });
       }
 
-      const result = await brdidService.getNumerosDisponiveis(ddd, quantity);
+      let result;
+      if (areaLocal) {
+        result = await brdidService.getNumerosDisponiveis(areaLocal, quantity);
+      } else {
+        result = await brdidService.getNumerosByDDD(ddd, quantity);
+      }
+      
       res.json({
         success: true,
         data: result,

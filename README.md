@@ -1,5 +1,8 @@
 # AtendimentoBR - BRDID Proxy API
 
+> 📚 **Novo aqui?** Comece pelo [Guia de Início Rápido (QUICKSTART.md)](QUICKSTART.md)  
+> 📖 **Documentação completa:** Veja o [Índice de Documentação (INDEX.md)](INDEX.md)
+
 API Proxy serverless para integração com BRDID, provedor de números VoIP, WhatsApp e SMS. Esta API abstrai toda a complexidade da plataforma BRDID para a plataforma AtendimentoBR.
 
 ## 🚀 Funcionalidades
@@ -52,12 +55,13 @@ cp .env.example .env
 
 4. Edite o arquivo `.env` com suas credenciais da BRDID:
 ```env
-BRDID_API_URL=https://brdid.com.br/api
-BRDID_API_KEY=sua_api_key_aqui
-BRDID_API_SECRET=seu_api_secret_aqui
+BRDID_API_URL=https://brdid.com.br/br-did/api/public
+BRDID_TOKEN=seu_token_aqui
 PORT=3000
 NODE_ENV=development
 ```
+
+**Nota**: O token já está configurado no `.env.example` para testes. Em produção, use suas próprias credenciais.
 
 ## 🚀 Executando o projeto
 
@@ -73,6 +77,34 @@ npm start
 
 A API estará disponível em `http://localhost:3000`
 
+## 🧪 Testando a API
+
+### Testes automatizados de integração com BRDID:
+```bash
+npm run test:integration
+```
+
+### Testes do proxy (requer servidor rodando):
+Em um terminal, inicie o servidor:
+```bash
+npm run dev
+```
+
+Em outro terminal, execute os testes:
+```bash
+npm run test:proxy
+```
+
+### Teste rápido com curl:
+```bash
+# Teste direto na API BRDID
+bash tests/quick-test.sh
+
+# Com o servidor rodando, teste o proxy:
+curl "http://localhost:3000/api/localidades/Porto%20Alegre"
+curl "http://localhost:3000/api/did/disponiveis?areaLocal=Porto%20Alegre&quantity=5"
+```
+
 ## 📚 Documentação
 
 A documentação completa da API está disponível via Swagger UI após iniciar o servidor:
@@ -83,10 +115,11 @@ A documentação completa da API está disponível via Swagger UI após iniciar 
 
 ### Localidades
 - `GET /api/localidades` - Lista todas as localidades/DDDs
-- `GET /api/localidades/:ddd` - Busca localidade específica
+- `GET /api/localidades/:areaLocal` - Busca números em uma área local específica (ex: "Porto Alegre")
 
 ### DID (Números VoIP)
-- `GET /api/did/disponiveis?ddd=11` - Lista números disponíveis para compra
+- `GET /api/did/disponiveis?areaLocal=Porto%20Alegre` - Lista números disponíveis por área local
+- `GET /api/did/disponiveis?ddd=51` - Lista números disponíveis por DDD (se disponível)
 - `GET /api/did/meus-numeros` - Lista seus números ativos
 - `POST /api/did/comprar` - Compra um número
 - `PUT /api/did/:numero/configurar` - Configura um número
@@ -143,9 +176,33 @@ brdid-integration/
 
 ## 🌐 Exemplo de Uso
 
-### Listar números disponíveis para compra:
+### Listar números disponíveis para compra (por área local):
 ```bash
-curl -X GET "http://localhost:3000/api/did/disponiveis?ddd=11&quantity=5"
+curl "http://localhost:3000/api/localidades/Porto%20Alegre"
+```
+
+Ou pelo endpoint específico:
+```bash
+curl "http://localhost:3000/api/did/disponiveis?areaLocal=Porto%20Alegre&quantity=5"
+```
+
+### Resposta esperada:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "CODIGO": "3262947",
+      "VALOR_MENSAL": "26.30",
+      "VALOR_INSTALACAO": "26.30",
+      "CN": "43",
+      "NUMERO": "2018-1390",
+      "GOLD": "0",
+      "SUPER_GOLD": "0",
+      "DIAMANTE": "0"
+    }
+  ]
+}
 ```
 
 ### Comprar um número:
@@ -184,6 +241,37 @@ Este projeto está sob a licença MIT.
 ## 📞 Suporte
 
 Para suporte e dúvidas, entre em contato com a equipe AtendimentoBR.
+
+## ⚠️ Notas Importantes
+
+### Endpoints da API BRDID
+
+A API pública da BRDID tem endpoints limitados. Os seguintes endpoints estão **confirmados como funcionais**:
+
+✅ **Funcionais:**
+- `buscar_numeros_by_area_local` - Buscar números por área local (ex: "Porto Alegre")
+
+⚠️ **Possivelmente indisponíveis na API pública:**
+- `buscar_numeros_by_ddd` - Buscar por DDD
+- `listar_areas_locais` - Listar todas as áreas
+- `listar_meus_numeros` - Listar números da conta
+- `verificar_saldo` - Verificar saldo
+- Endpoints de compra e configuração (requerem autenticação específica)
+
+### Autenticação
+
+A API utiliza TOKEN como query parameter:
+```
+?TOKEN=seu_token_aqui
+```
+
+O token é automaticamente adicionado a todas as requisições pelo serviço proxy.
+
+### Documentação Completa
+
+Para informações detalhadas sobre todos os endpoints disponíveis na API BRDID, consulte:
+- Documentação oficial: https://brdid.com.br/api-docs/
+- Swagger UI do proxy: http://localhost:3000/api-docs
 
 ---
 

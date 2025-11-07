@@ -51,18 +51,18 @@ router.get('/', localidadesController.listarLocalidades);
 
 /**
  * @swagger
- * /api/localidades/{ddd}:
+ * /api/localidades/{areaLocal}:
  *   get:
  *     summary: Busca informações de uma localidade específica
  *     tags: [Localidades]
  *     parameters:
  *       - in: path
- *         name: ddd
+ *         name: areaLocal
  *         required: true
  *         schema:
  *           type: string
- *         description: DDD da localidade
- *         example: "11"
+ *         description: Nome da área local
+ *         example: "Porto Alegre"
  *     responses:
  *       200:
  *         description: Informações da localidade
@@ -77,20 +77,21 @@ router.get('/', localidadesController.listarLocalidades);
  *                 data:
  *                   type: object
  *                   properties:
+ *                     areaLocal:
+ *                       type: string
+ *                       example: "Porto Alegre"
  *                     ddd:
  *                       type: string
- *                       example: "11"
- *                     cidade:
- *                       type: string
- *                       example: "São Paulo"
- *                     estado:
- *                       type: string
- *                       example: "SP"
+ *                       example: "51"
+ *                     numeros:
+ *                       type: array
+ *                       items:
+ *                         type: object
  *       404:
  *         description: Localidade não encontrada
  *       500:
  *         description: Erro no servidor
  */
-router.get('/:ddd', localidadesController.buscarLocalidade);
+router.get('/:areaLocal', localidadesController.buscarLocalidade);
 
 module.exports = router;

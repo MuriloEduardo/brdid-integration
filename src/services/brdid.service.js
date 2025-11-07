@@ -4,19 +4,22 @@ const config = require('../config');
 class BRDIDService {
   constructor() {
     this.apiUrl = config.brdid.apiUrl;
-    this.apiKey = config.brdid.apiKey;
-    this.apiSecret = config.brdid.apiSecret;
+    this.token = config.brdid.token;
     
     this.client = axios.create({
       baseURL: this.apiUrl,
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
       },
     });
 
-    // Interceptor para adicionar autenticação
+    // Interceptor para adicionar TOKEN como query param
     this.client.interceptors.request.use((config) => {
-      config.headers['Authorization'] = `Bearer ${this.apiKey}`;
+      if (!config.params) {
+        config.params = {};
+      }
+      config.params.TOKEN = this.token;
       return config;
     });
   }
@@ -30,7 +33,10 @@ class BRDIDService {
         method,
         url: endpoint,
         data,
-        params,
+        params: {
+          ...params,
+          TOKEN: this.token, // Garante que TOKEN está sempre presente
+        },
       });
       return response.data;
     } catch (error) {
@@ -49,45 +55,83 @@ class BRDIDService {
    * Lista todas as localidades/DDDs disponíveis
    */
   async getLocalidades() {
-    return this.request('GET', '/localidades');
+    return this.request('GET', '/listar_areas_locais');
   }
 
   /**
-   * Busca informações de uma localidade específica
+   * Busca informações de uma localidade específica por nome
    */
-  async getLocalidade(ddd) {
-    return this.request('GET', `/localidades/${ddd}`);
+  async getLocalidade(areaLocal) {
+    return this.request('GET', '/buscar_numeros_by_area_local', null, { 
+      AREA_LOCAL: areaLocal 
+    });
   }
 
   // ==================== DID (NÚMEROS) ====================
   
   /**
-   * Lista números DID disponíveis para compra
+   * Lista números DID disponíveis para compra por área local
    */
-  async getNumerosDisponiveis(ddd, quantity = 10) {
-    return this.request('GET', '/did/disponiveis', null, { ddd, quantity });
+  async getNumerosDisponiveis(areaLocal, quantity = 10) {
+    return this.request('GET', '/buscar_numeros_by_area_local', null, { 
+      AREA_LOCAL: areaLocal,
+      LIMIT: quantity 
+    });
+  }
+
+  /**
+   * Busca números disponíveis por DDD
+   */
+  async getNumerosByDDD(ddd, quantity = 10) {
+    return this.request('GET', '/buscar_numeros_by_ddd', null, { 
+      DDD: ddd,
+      LIMIT: quantity 
+    });
   }
 
   /**
    * Lista todos os números DID da conta
    */
   async getMeusNumeros(params = {}) {
-    return this.request('GET', '/did/meus-numeros', null, params);
+    // Nota: Endpoint pode não existir na API pública
+    // Verificar documentação completa da BRDID
+    try {
+      return this.request('GET', '/listar_meus_numeros', null, params);
+    } catch (error) {
+      // Se o endpoint não existir, retorna array vazio
+      if (error.statusCode === 404) {
+        return [];
+      }
+      throw error;
+    }
   }
 
   /**
    * Busca informações de um número específico
    */
   async getNumero(numero) {
-    return this.request('GET', `/did/${numero}`);
+    // Nota: Endpoint pode não existir na API pública
+    try {
+      return this.request('GET', `/consultar_numero`, null, { NUMERO: numero });
+    } catch (error) {
+      if (error.statusCode === 404) {
+        throw {
+          success: false,
+          error: 'Número não encontrado ou endpoint não disponível',
+          statusCode: 404,
+        };
+      }
+      throw error;
+    }
   }
 
   /**
    * Compra um número DID
    */
   async comprarNumero(numero, configuracoes = {}) {
-    return this.request('POST', '/did/comprar', {
-      numero,
+    // Nota: Endpoint de compra requer autenticação específica
+    return this.request('POST', '/comprar_numero', {
+      NUMERO: numero,
       ...configuracoes,
     });
   }
@@ -96,14 +140,17 @@ class BRDIDService {
    * Configura um número DID existente
    */
   async configurarNumero(numero, configuracoes) {
-    return this.request('PUT', `/did/${numero}/configurar`, configuracoes);
+    return this.request('PUT', `/configurar_numero`, {
+      NUMERO: numero,
+      ...configuracoes,
+    });
   }
 
   /**
    * Cancela/Remove um número DID
    */
   async cancelarNumero(numero) {
-    return this.request('DELETE', `/did/${numero}`);
+    return this.request('DELETE', `/cancelar_numero`, null, { NUMERO: numero });
   }
 
   // ==================== WHATSAPP ====================
@@ -182,28 +229,60 @@ class BRDIDService {
    * Obtém saldo da conta
    */
   async getSaldo() {
-    return this.request('GET', '/billing/saldo');
+    try {
+      return this.request('GET', '/verificar_saldo');
+    } catch (error) {
+      if (error.statusCode === 404) {
+        return { saldo: 0, message: 'Endpoint não disponível na API pública' };
+      }
+      throw error;
+    }
   }
 
   /**
    * Lista transações/extrato
    */
   async getExtrato(params = {}) {
-    return this.request('GET', '/billing/extrato', null, params);
+    try {
+      return this.request('GET', '/extrato', null, params);
+    } catch (error) {
+      if (error.statusCode === 404) {
+        return [];
+      }
+      throw error;
+    }
   }
 
   /**
    * Lista faturas
    */
   async getFaturas(params = {}) {
-    return this.request('GET', '/billing/faturas', null, params);
+    try {
+      return this.request('GET', '/faturas', null, params);
+    } catch (error) {
+      if (error.statusCode === 404) {
+        return [];
+      }
+      throw error;
+    }
   }
 
   /**
    * Obtém detalhes de uma fatura específica
    */
   async getFatura(faturaId) {
-    return this.request('GET', `/billing/faturas/${faturaId}`);
+    try {
+      return this.request('GET', `/faturas/${faturaId}`);
+    } catch (error) {
+      if (error.statusCode === 404) {
+        throw {
+          success: false,
+          error: 'Fatura não encontrada ou endpoint não disponível',
+          statusCode: 404,
+        };
+      }
+      throw error;
+    }
   }
 
   // ==================== CLIENTES ====================

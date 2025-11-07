@@ -6,7 +6,11 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "jest"
+    "test": "jest",
+    "test:integration": "node tests/integration.test.js",
+    "test:proxy": "node tests/test-proxy.js",
+    "verify": "bash tests/verify-setup.sh",
+    "docs": "echo '📚 Documentação: http://localhost:3000/api-docs' && npm run dev"
   },
   "keywords": [
     "brdid",

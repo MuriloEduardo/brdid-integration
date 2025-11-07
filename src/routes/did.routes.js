@@ -18,11 +18,16 @@ const didController = require('../controllers/did.controller');
  *     parameters:
  *       - in: query
  *         name: ddd
- *         required: true
  *         schema:
  *           type: string
- *         description: DDD da localidade desejada
- *         example: "11"
+ *         description: DDD da localidade desejada (ex. 11, 51)
+ *         example: "51"
+ *       - in: query
+ *         name: areaLocal
+ *         schema:
+ *           type: string
+ *         description: Nome da área local (ex. "Porto Alegre", "São Paulo")
+ *         example: "Porto Alegre"
  *       - in: query
  *         name: quantity
  *         schema:
@@ -56,7 +61,7 @@ const didController = require('../controllers/did.controller');
  *                         type: number
  *                         example: 15.00
  *       400:
- *         description: DDD não informado
+ *         description: DDD ou areaLocal não informado
  *       500:
  *         description: Erro no servidor
  */

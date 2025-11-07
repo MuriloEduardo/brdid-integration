@@ -27,8 +27,8 @@ class LocalidadesController {
    */
   async buscarLocalidade(req, res) {
     try {
-      const { ddd } = req.params;
-      const result = await brdidService.getLocalidade(ddd);
+      const { areaLocal } = req.params;
+      const result = await brdidService.getLocalidade(areaLocal);
       res.json({
         success: true,
         data: result,
