@@ -11,7 +11,15 @@ const app = express();
 
 // Middlewares de segurança e utilidades
 app.use(helmet({
-    contentSecurityPolicy: false, // Desabilita CSP para permitir Swagger UI
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+            imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'"],
+        },
+    },
 }));
 app.use(cors());
 app.use(morgan('dev'));
@@ -29,14 +37,26 @@ app.get('/', (req, res) => {
 });
 
 // Documentação Swagger
-app.use('/api-docs', swaggerUi.serve);
-app.get('/api-docs', swaggerUi.setup(swaggerSpec, {
+const swaggerUiOptions = {
     customCss: '.swagger-ui .topbar { display: none }',
     customSiteTitle: 'AtendimentoBR BRDID API',
+    customfavIcon: 'https://swagger.io/favicon.ico',
     swaggerOptions: {
         url: '/api-docs/swagger.json',
     },
-}));
+};
+
+// Para Vercel, usa CDN para assets do Swagger UI
+if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+    swaggerUiOptions.customCssUrl = 'https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css';
+    swaggerUiOptions.customJs = [
+        'https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js',
+        'https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-standalone-preset.js'
+    ];
+}
+
+app.use('/api-docs', swaggerUi.serve);
+app.get('/api-docs', swaggerUi.setup(swaggerSpec, swaggerUiOptions));
 
 // Rota para servir o JSON do Swagger
 app.get('/api-docs/swagger.json', (req, res) => {
