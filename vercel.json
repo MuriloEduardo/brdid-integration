@@ -8,11 +8,26 @@
   ],
   "routes": [
     {
+      "src": "/api-docs/(.*)",
+      "dest": "api/index.js"
+    },
+    {
       "src": "/(.*)",
       "dest": "api/index.js"
     }
   ],
   "env": {
     "NODE_ENV": "production"
-  }
+  },
+  "headers": [
+    {
+      "source": "/api-docs/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    }
+  ]
 }

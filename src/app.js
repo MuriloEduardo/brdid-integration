@@ -10,7 +10,9 @@ const routes = require('./routes');
 const app = express();
 
 // Middlewares de segurança e utilidades
-app.use(helmet());
+app.use(helmet({
+    contentSecurityPolicy: false, // Desabilita CSP para permitir Swagger UI
+}));
 app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json());
@@ -27,10 +29,20 @@ app.get('/', (req, res) => {
 });
 
 // Documentação Swagger
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+app.use('/api-docs', swaggerUi.serve);
+app.get('/api-docs', swaggerUi.setup(swaggerSpec, {
     customCss: '.swagger-ui .topbar { display: none }',
     customSiteTitle: 'AtendimentoBR BRDID API',
+    swaggerOptions: {
+        url: '/api-docs/swagger.json',
+    },
 }));
+
+// Rota para servir o JSON do Swagger
+app.get('/api-docs/swagger.json', (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.send(swaggerSpec);
+});
 
 // Rotas da API
 app.use('/api', routes);

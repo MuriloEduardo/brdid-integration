@@ -1,5 +1,17 @@
 const swaggerJsdoc = require('swagger-jsdoc');
 
+// Detecta o ambiente e define a URL base
+const getServerUrl = () => {
+    if (process.env.VERCEL_URL) {
+        return `https://${process.env.VERCEL_URL}`;
+    }
+    if (process.env.NODE_ENV === 'production') {
+        return 'https://brdid-integration.vercel.app';
+    }
+    const port = process.env.PORT || 3001;
+    return `http://localhost:${port}`;
+};
+
 const options = {
     definition: {
         openapi: '3.0.0',
@@ -13,12 +25,8 @@ const options = {
         },
         servers: [
             {
-                url: 'http://localhost:3000',
-                description: 'Servidor de Desenvolvimento',
-            },
-            {
-                url: 'https://api.atendimentobr.com',
-                description: 'Servidor de Produção',
+                url: getServerUrl(),
+                description: process.env.NODE_ENV === 'production' ? 'Servidor de Produção' : 'Servidor de Desenvolvimento',
             },
         ],
         components: {
