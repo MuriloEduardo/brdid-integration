@@ -2,29 +2,15 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const path = require('path');
+const swaggerUi = require('swagger-ui-express');
 const config = require('./config');
 const swaggerSpec = require('./config/swagger');
 const routes = require('./routes');
 
 const app = express();
 
-// Serve arquivos estáticos da pasta public
-app.use(express.static(path.join(__dirname, '../public')));
-
 // Middlewares de segurança e utilidades
-app.use(helmet({
-    contentSecurityPolicy: {
-        directives: {
-            defaultSrc: ["'self'"],
-            styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.jsdelivr.net"],
-            imgSrc: ["'self'", "data:", "https:"],
-            connectSrc: ["'self'"],
-            fontSrc: ["'self'", "https://cdn.jsdelivr.net"],
-        },
-    },
-}));
+app.use(helmet());
 app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json());
@@ -40,16 +26,8 @@ app.get('/', (req, res) => {
     });
 });
 
-// Documentação Swagger - serve HTML customizado
-app.get('/api-docs', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/swagger.html'));
-});
-
-// Rota para servir o JSON do Swagger
-app.get('/api-docs/swagger.json', (req, res) => {
-    res.setHeader('Content-Type', 'application/json');
-    res.send(swaggerSpec);
-});
+// Documentação Swagger
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Rotas da API
 app.use('/api', routes);
